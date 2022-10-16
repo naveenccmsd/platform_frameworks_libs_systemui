@@ -272,6 +272,15 @@ public class ThemedIconDrawable extends FastBitmapDrawable {
             }
             throw new IllegalArgumentException("original must be AdaptiveIconDrawable or BitmapDrawable");
         }
+
+        @Override
+        public String toString() {
+            return "ThemeData{" +
+                "mResources=" + mResources +
+                ", mPackageName='" + mPackageName + '\'' +
+                ", mResID=" + mResID +
+                '}';
+        }
     }
 
     static class ThemedAdaptiveIcon extends CustomAdaptiveIconDrawable implements Extender {

@@ -23,8 +23,11 @@
     <dimen name="default_icon_bitmap_size">56dp</dimen>
     <bool name="simple_cache_enable_im_memory">false</bool>
     <string name="cache_db_name" translatable="false">app_icons.db</string>
-
     <string name="calendar_component_name" translatable="false"></string>
     <string name="clock_component_name" translatable="false"></string>
+    <string-array name="calendar_components_name">
+    </string-array>
+    <string-array name="clock_components_name">
+    </string-array>
 
 </resources>

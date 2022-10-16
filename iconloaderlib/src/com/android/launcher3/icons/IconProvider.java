@@ -47,12 +47,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.launcher3.icons.ThemedIconDrawable.ThemeData;
+import com.android.launcher3.util.CommonUtil;
 import com.android.launcher3.util.SafeCloseable;
 
 import org.xmlpull.v1.XmlPullParser;
 
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -87,6 +89,7 @@ public class IconProvider {
     private final Context mContext;
     protected final ComponentName mCalendar;
     protected final ComponentName mClock;
+    protected final List<ComponentName> mClocks;
 
     protected static final int ICON_TYPE_DEFAULT = 0;
     protected static final int ICON_TYPE_CALENDAR = 1;
@@ -100,6 +103,7 @@ public class IconProvider {
         mContext = context;
         mCalendar = parseComponentOrNull(context, R.string.calendar_component_name);
         mClock = parseComponentOrNull(context, R.string.clock_component_name);
+        mClocks = CommonUtil.parseComponentsOrNull(context,R.array.clock_components_name);
         if (!supportsIconTheme) {
             // Initialize an empty map if theming is not supported
             mThemedIconMap = DISABLED_MAP;
@@ -151,24 +155,35 @@ public class IconProvider {
 
     protected Drawable getIconWithOverrides(String packageName, String component, UserHandle user, int iconDpi,
             Supplier<Drawable> fallback) {
+        ThemeData td = getThemeData(packageName, component);
         Drawable icon = null;
-
+        Log.d(TAG,"getIconWithOverrides " + packageName);
         int iconType = ICON_TYPE_DEFAULT;
         if (mCalendar != null && mCalendar.getPackageName().equals(packageName)) {
+            Log.d(TAG,"mCalendar " + packageName);
             icon = loadCalendarDrawable(iconDpi);
             iconType = ICON_TYPE_CALENDAR;
         } else if (mClock != null
                 && mClock.getPackageName().equals(packageName)
                 && Process.myUserHandle().equals(user)) {
+            Log.d(TAG,"mClock " + packageName);
             icon = loadClockDrawable(iconDpi);
+            iconType = ICON_TYPE_CLOCK;
+        }else if (mClocks != null
+            && mClocks.stream().anyMatch(s->s.getPackageName().equalsIgnoreCase(packageName))
+            && Process.myUserHandle().equals(user)) {
+            Log.d(TAG,"mClocks " + packageName);
+
+            icon = ClockDrawableWrapper.forPackage(mContext,td,iconDpi);
             iconType = ICON_TYPE_CLOCK;
         }
         if (icon == null) {
+            Log.d(TAG,"default " + packageName);
             icon = fallback.get();
             iconType = ICON_TYPE_DEFAULT;
         }
 
-        ThemeData td = getThemeData(packageName, component);
+//        ThemeData td = getThemeData(packageName, component);
         return td != null ? td.wrapDrawable(icon, iconType) : icon;
     }
 
@@ -336,10 +351,10 @@ public class IconProvider {
 
             if (mCalendar != null || mClock != null) {
                 final IntentFilter filter = new IntentFilter(ACTION_TIMEZONE_CHANGED);
-                if (mCalendar != null) {
+//                if (mCalendar != null) {
                     filter.addAction(Intent.ACTION_TIME_CHANGED);
                     filter.addAction(ACTION_DATE_CHANGED);
-                }
+//                }
                 mContext.registerReceiver(this, filter, null, handler);
             }
         }
@@ -354,12 +369,10 @@ public class IconProvider {
                     // follow through
                 case ACTION_DATE_CHANGED:
                 case ACTION_TIME_CHANGED:
-                    if (mCalendar != null) {
                         for (UserHandle user
                                 : context.getSystemService(UserManager.class).getUserProfiles()) {
-                            mCallback.onAppIconChanged(mCalendar.getPackageName(), user);
+                            CommonUtil.updateIconState( context, mCallback,user);
                         }
-                    }
                     break;
                 case ACTION_OVERLAY_CHANGED: {
                     String newState = getSystemIconState();

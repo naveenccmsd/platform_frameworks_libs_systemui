@@ -104,14 +104,44 @@ public class ClockDrawableWrapper extends CustomAdaptiveIconDrawable implements 
      * Loads and returns the wrapper from the provided package, or returns null
      * if it is unable to load.
      */
+    public static ClockDrawableWrapper forPackage(Context context, ThemeData td, int iconDpi) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            Log.d(TAG,"ClockDrawableWrapper forPackage new" );
+//            ApplicationInfo appInfo =  pm.getApplicationInfo(pkg,
+//                    PackageManager.MATCH_UNINSTALLED_PACKAGES | PackageManager.GET_META_DATA);
+//            Resources res = pm.getResourcesForApplication(appInfo);
+            ApplicationInfo appInfo = context.getApplicationInfo();
+            Resources res = context.getResources();
+            Drawable drawable = context.getResources().getDrawableForDensity(td.mResID, iconDpi, null /* theme */);
+            ClockMetadata clockMetadata = new ClockMetadata(
+                0,
+                1,
+                INVALID_VALUE,
+                0,
+                0,
+                0
+            );
+
+           return getClockDrawableWrapper(appInfo.targetSdkVersion, clockMetadata, drawable);
+//            return forExtras(appInfo, appInfo.metaData,
+//                    resId -> res.getDrawableForDensity(resId, iconDpi),td.mResID);
+        } catch (Exception e) {
+            Log.d(TAG, "Unable to load clock drawable info", e);
+        }
+        return null;
+    }
     public static ClockDrawableWrapper forPackage(Context context, String pkg, int iconDpi) {
         try {
             PackageManager pm = context.getPackageManager();
-            ApplicationInfo appInfo =  pm.getApplicationInfo(pkg,
-                    PackageManager.MATCH_UNINSTALLED_PACKAGES | PackageManager.GET_META_DATA);
-            Resources res = pm.getResourcesForApplication(appInfo);
+            Log.d(TAG,"ClockDrawableWrapper forPackage " );
+//            ApplicationInfo appInfo =  pm.getApplicationInfo(pkg,
+//                    PackageManager.MATCH_UNINSTALLED_PACKAGES | PackageManager.GET_META_DATA);
+//            Resources res = pm.getResourcesForApplication(appInfo);
+            ApplicationInfo appInfo = context.getApplicationInfo();
+            Resources res = context.getResources();
             return forExtras(appInfo, appInfo.metaData,
-                    resId -> res.getDrawableForDensity(resId, iconDpi));
+                resId -> res.getDrawableForDensity(resId, iconDpi),0);
         } catch (Exception e) {
             Log.d(TAG, "Unable to load clock drawable info", e);
         }
@@ -137,7 +167,7 @@ public class ClockDrawableWrapper extends CustomAdaptiveIconDrawable implements 
                         Drawable fg = themeData.mResources.getDrawable(resId).mutate();
                         fg.setTint(colors[1]);
                         return new CustomAdaptiveIconDrawable(bg, fg);
-                    });
+                    },0);
             if (drawable != null) {
                 return drawable;
             }
@@ -148,18 +178,25 @@ public class ClockDrawableWrapper extends CustomAdaptiveIconDrawable implements 
     }
 
     private static ClockDrawableWrapper forExtras(ApplicationInfo appInfo, Bundle metadata,
-            IntFunction<Drawable> drawableProvider) {
+            IntFunction<Drawable> drawableProvider,int drawableId) {
+        Log.d(TAG,"ClockDrawableWrapper forExtras " );
+
         if (metadata == null) {
+            Log.d(TAG,"ClockDrawableWrapper null " );
+
             return null;
         }
 
-        int drawableId = metadata.getInt(ROUND_ICON_METADATA_KEY, 0);
+//        drawableId = metadata.getInt(ROUND_ICON_METADATA_KEY, 0);
+        Log.d(TAG,"ClockDrawableWrapper forExtras drawableId " +drawableId );
         if (drawableId == 0) {
             return null;
         }
 
-        int hourLayerIndex = metadata.getInt(HOUR_INDEX_METADATA_KEY, INVALID_VALUE);
-        int minuteLayerIndex = metadata.getInt(MINUTE_INDEX_METADATA_KEY, INVALID_VALUE);
+//        int hourLayerIndex = metadata.getInt(HOUR_INDEX_METADATA_KEY, INVALID_VALUE);
+        int hourLayerIndex = 0;
+//        int minuteLayerIndex = metadata.getInt(MINUTE_INDEX_METADATA_KEY, INVALID_VALUE);
+        int minuteLayerIndex = 1;
         int secondLayerIndex = metadata.getInt(SECOND_INDEX_METADATA_KEY, INVALID_VALUE);
 
         int defaultHour = metadata.getInt(DEFAULT_HOUR_METADATA_KEY, 0);
@@ -180,28 +217,40 @@ public class ClockDrawableWrapper extends CustomAdaptiveIconDrawable implements 
 
     public static ClockDrawableWrapper forMeta(int targetSdkVersion,
             @NonNull ClockMetadata metadata, Supplier<Drawable> drawableProvider) {
+        Log.d(TAG,"ClockDrawableWrapper forMeta  "  );
+
         Drawable drawable = drawableProvider.get().mutate();
         if (!(drawable instanceof AdaptiveIconDrawable)) {
+            Log.d(TAG,"ClockDrawableWrapper forMeta   drawable instanceof AdaptiveIconDrawable == null"  );
+
             return null;
         }
 
+        return null;
+    }
+
+    @NonNull
+    private static ClockDrawableWrapper getClockDrawableWrapper(int targetSdkVersion, @NonNull ClockMetadata metadata, Drawable drawable) {
+        Log.d(TAG,"ClockDrawableWrapper getClockDrawableWrapper new" );
+
         ClockDrawableWrapper wrapper =
                 new ClockDrawableWrapper((AdaptiveIconDrawable) drawable);
-        wrapper.mTargetSdkVersion = targetSdkVersion;
-        AnimationInfo info = wrapper.mAnimationInfo;
+//        wrapper.mTargetSdkVersion = targetSdkVersion;
+        AnimationInfo info = new AnimationInfo();
 
         info.baseDrawableState = drawable.getConstantState();
 
-        info.hourLayerIndex = metadata.getHourLayerIndex();
-        info.minuteLayerIndex = metadata.getMinuteLayerIndex();
+        info.hourLayerIndex = 0;
+        info.minuteLayerIndex = 1;
         info.secondLayerIndex = metadata.getSecondLayerIndex();
 
-        info.defaultHour = metadata.getDefaultHour();
-        info.defaultMinute = metadata.getDefaultMinute();
+        info.defaultHour = 0;
+        info.defaultMinute = 45;
         info.defaultSecond = metadata.getDefaultSecond();
 
-        LayerDrawable foreground = (LayerDrawable) wrapper.getForeground();
+        LayerDrawable foreground = (LayerDrawable) drawable;
         int layerCount = foreground.getNumberOfLayers();
+        Log.d(TAG,"layerCount " + layerCount);
         if (info.hourLayerIndex < 0 || info.hourLayerIndex >= layerCount) {
             info.hourLayerIndex = INVALID_VALUE;
         }
